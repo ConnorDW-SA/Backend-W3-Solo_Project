@@ -4,7 +4,9 @@ const { Schema, model } = mongoose;
 
 const ReviewSchema = new Schema({
   comment: { type: String, required: true },
-  rate: { type: Number, required: true, max: 5 }
+  rate: { type: Number, required: true, max: 5 },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
 
 const ProductSchema = new Schema({

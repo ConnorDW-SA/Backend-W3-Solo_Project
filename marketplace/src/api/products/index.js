@@ -2,6 +2,7 @@ import express from "express";
 import createHttpError from "http-errors";
 import productModel from "./model.js";
 import q2m from "query-to-mongo";
+import cartModel from "./cartModel.js";
 
 const productsRouter = express.Router();
 
@@ -195,6 +196,59 @@ productsRouter.delete("/:id/reviews/:reviewId", async (req, res, next) => {
       }
     } else {
       next(createHttpError(404, `Product with id ${req.params.id} not found!`));
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ------------------------CART------------------------//
+
+productsRouter.post("/add-to-cart", async (req, res, next) => {
+  try {
+    const cart = new cartModel(req.body);
+    const { _id } = await cart.save();
+    res.status(201).send(_id);
+  } catch (error) {
+    next(error);
+  }
+});
+
+productsRouter.post("/cartId", async (req, res, next) => {
+  try {
+    const { id, quantity } = req.body;
+    const cart = await cartModel.findById(req.params.cartId);
+
+    if (!cart) {
+      next(
+        createHttpError(404, `Cart with id ${req.params.cartId} not found!`)
+      );
+
+      const product = await productModel.findById(id);
+
+      if (!product) {
+        next(createHttpError(404, `Product with id ${id} not found!`));
+
+        const index = cart.products.findIndex(
+          (p) => p.id.toString() === req.body.id
+        );
+
+        if (index !== -1) {
+          const newCart = await cartModel.findOneAndUpdate(
+            { _id: req.params.cartId, "products.id": id },
+            { $inc: { "products.$.quantity": quantity } },
+            { runValidators: true, new: true }
+          );
+          res.send(newCart);
+        } else {
+          const newCart = await cartModel.findOneAndUpdate(
+            { _id: req.params.cartId },
+            { $push: { products: req.body } },
+            { runValidators: true, new: true }
+          );
+          res.send(newCart);
+        }
+      }
     }
   } catch (error) {
     next(error);
